@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { RoomEntity } from '../entity/room.entity';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { CreateRoomDto } from '../dto/create-room.dto';
 import { User } from 'src/user/model/user.interface';
 import { Room } from '../model/room.interface';
@@ -10,24 +10,36 @@ import {
   Pagination,
   paginate,
 } from 'nestjs-typeorm-paginate';
+import { UserService } from 'src/user/service/user.service';
+import { UserEntity } from 'src/user/entity/user.entity';
 
 @Injectable()
 export class RoomService {
   constructor(
     @InjectRepository(RoomEntity)
     private readonly roomRepository: Repository<RoomEntity>,
+    private readonly userService: UserService,
   ) {}
 
+  roomRepo = this.roomRepository;
+
   async createRoom(room: CreateRoomDto, creator: User): Promise<Room> {
-    const ids = room.users.map((user) => user.id);
-    if (!ids.includes(creator.id)) {
-      room.users.push(creator);
+    if (!room.userIds.includes(creator.id)) {
+      room.userIds.push(creator.id);
     }
 
-    return this.roomRepository.save(room);
-  }
+    const users = await this.userService.userRepo.find({
+      where: { id: In(room.userIds) },
+    });
 
-  // load room in which user is
+    const newRoom = {
+      name: room.name,
+      description: room.description,
+      users,
+    };
+
+    return this.roomRepository.save(newRoom);
+  }
 
   async getRoomForUser(
     userId: number,

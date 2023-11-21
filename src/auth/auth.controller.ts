@@ -21,7 +21,6 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('login')
-  // @UseGuards(JwtAuthGuard)
   async login(@Body() loginDto: LoginDto): Promise<LoginResponse> {
     const jwt = await this.authService.login(loginDto);
     return {

@@ -9,5 +9,5 @@ export class CreateRoomDto {
   description: string;
 
   @IsOptional()
-  users: User[];
+  userIds: number[];
 }

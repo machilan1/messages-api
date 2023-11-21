@@ -2,6 +2,7 @@ import { IsNotEmpty } from 'class-validator';
 import { UserEntity } from 'src/user/entity/user.entity';
 import {
   Column,
+  CreateDateColumn,
   Entity,
   JoinColumn,
   ManyToOne,
@@ -17,6 +18,9 @@ export class MessageEntity {
   @IsNotEmpty()
   @Column()
   text: string;
+
+  @CreateDateColumn()
+  createdAt: Date;
 
   @ManyToOne(() => UserEntity, (user) => user.messages)
   @JoinColumn()

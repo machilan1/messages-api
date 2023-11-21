@@ -22,8 +22,10 @@ import {
   ValidationPipe,
 } from '@nestjs/common';
 import { ConnectedUserService } from '../service/connected-user.service';
-import { IsNotEmpty } from 'class-validator';
-import { JwtAuthGuard } from 'src/auth/guards/jwt.guard';
+import { MessageService } from '../service/message.service';
+import { AddMessageDto } from '../dto/sendMessage.dto';
+import { LegitSenderGuard } from 'src/auth/guards/user-identity.guard';
+import { In } from 'typeorm';
 
 @WebSocketGateway()
 export class ChatGateway
@@ -33,6 +35,7 @@ export class ChatGateway
     private readonly roomService: RoomService,
     private readonly authService: AuthService,
     private readonly userService: UserService,
+    private readonly messageService: MessageService,
     private readonly connectedUserService: ConnectedUserService,
   ) {}
 
@@ -103,31 +106,57 @@ export class ChatGateway
     } catch (e) {
       throw e;
     }
-
-    // load rooms by user
   }
 
   async handleDisconnect(socket: Socket) {
-    // remove user from connected user table
-    await this.connectedUserService.connectedUserRepo.delete({
-      socketId: socket.id,
-    });
+    let unremoved = true;
+
+    while (unremoved) {
+      await this.connectedUserService.connectedUserRepo.delete({
+        socketId: socket.id,
+      });
+      const user = await this.connectedUserService.connectedUserRepo.findOneBy({
+        socketId: socket.id,
+      });
+
+      if (!user) unremoved = false;
+    }
 
     console.log('Disconnected');
   }
 
+  @UseGuards(LegitSenderGuard)
   @SubscribeMessage('addMessage')
-  @UseGuards(JwtAuthGuard)
-  handleMessage(
+  @UsePipes(
+    new ValidationPipe({
+      exceptionFactory: (errors) => new WsException(errors),
+    }),
+  )
+  async handleAddMessage(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: string,
+    @MessageBody() data: AddMessageDto,
   ) {
-    // throw new WsException(data);
-    return this.server.to(client.id).emit('message', data);
+    const createdMessage = await this.messageService.sendMessage(data);
+
+    return this.server.to(client.id).emit('message', createdMessage);
   }
 
   @SubscribeMessage('createRoom')
-  onCreateRoom(socket: Socket, room: CreateRoomDto) {
-    this.roomService.createRoom(room, socket.data.user);
+  async onCreateRoom(
+    @ConnectedSocket()
+    client: Socket,
+    @MessageBody()
+    room: CreateRoomDto,
+  ) {
+    const newRoom = await this.roomService.createRoom(room, client.data.user);
+
+    const sessions: { id: number; socketId: string }[] =
+      await this.connectedUserService.connectedUserRepo.findBy({
+        user: In(newRoom.users.map((user) => user.id)),
+      });
+
+    return this.server
+      .to(sessions.map((session) => session.socketId))
+      .emit('createRoom', newRoom);
   }
 }

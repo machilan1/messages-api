@@ -10,6 +10,7 @@ import { ConnectedUserService } from './service/connected-user.service';
 import { ConnectedUserEntity } from './entity/connected-user.entity';
 import { MessageEntity } from './entity/message.entity';
 import { UserEntity } from 'src/user/entity/user.entity';
+import { MessageService } from './service/message.service';
 
 @Module({
   imports: [
@@ -22,7 +23,7 @@ import { UserEntity } from 'src/user/entity/user.entity';
     AuthModule,
     UserModule,
   ],
-  providers: [RoomService, ChatGateway, ConnectedUserService],
+  providers: [RoomService, ChatGateway, ConnectedUserService, MessageService],
   controllers: [ChatController],
 })
 export class ChatModule {}

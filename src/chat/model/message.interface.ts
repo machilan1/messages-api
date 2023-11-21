@@ -6,6 +6,5 @@ export interface Message {
   text: string;
   author: User;
   room: Room;
-  createAt: Date;
-  updatedAt: Date;
+  createAt?: Date;
 }
