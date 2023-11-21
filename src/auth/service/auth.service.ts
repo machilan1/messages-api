@@ -41,7 +41,7 @@ export class AuthService {
       throw new ConflictException('Invalid credentials');
     }
 
-    return this.jwtService.signAsync({ foundUser });
+    return this.jwtService.signAsync({ user: foundUser });
   }
 
   async register(user: RegisterDto) {
@@ -82,5 +82,9 @@ export class AuthService {
     return this.userService.userRepo.findOneBy({
       id: savedUser.id,
     });
+  }
+
+  verifyJwt(jwt: string): Promise<any> {
+    return this.jwtService.verifyAsync(jwt);
   }
 }

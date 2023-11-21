@@ -10,5 +10,6 @@ export class UserService {
     @InjectRepository(UserEntity)
     private readonly userRepository: Repository<UserEntity>,
   ) {}
+
   userRepo = this.userRepository;
 }
