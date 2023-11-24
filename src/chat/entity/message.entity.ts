@@ -19,7 +19,7 @@ export class MessageEntity {
   @Column()
   text: string;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
   @ManyToOne(() => UserEntity, (user) => user.messages)

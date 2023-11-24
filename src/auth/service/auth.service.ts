@@ -21,12 +21,7 @@ export class AuthService {
     let foundUser: User;
 
     try {
-      foundUser = await this.userService.userRepo.findOne({
-        select: ['email', 'id', 'password', 'username'],
-        where: {
-          email: user.email,
-        },
-      });
+      foundUser = await this.userService.findOneByEmail(user.email);
     } catch {
       throw new InternalServerErrorException();
     }
@@ -48,9 +43,7 @@ export class AuthService {
     let foundUser: User;
 
     try {
-      foundUser = await this.userService.userRepo.findOneBy({
-        username: user.username,
-      });
+      foundUser = await this.userService.findOneByUsername(user.username);
     } catch {
       throw new InternalServerErrorException();
     }
@@ -60,9 +53,7 @@ export class AuthService {
     }
 
     try {
-      foundUser = await this.userService.userRepo.findOneBy({
-        email: user.email,
-      });
+      foundUser = await this.userService.findOneByEmail(user.email);
     } catch {
       throw new InternalServerErrorException();
     }
@@ -75,13 +66,9 @@ export class AuthService {
 
     user.password = passwordHash;
 
-    const savedUser = await this.userService.userRepo.save(
-      this.userService.userRepo.create(user),
-    );
+    const savedUser = await this.userService.createUser(user);
 
-    return this.userService.userRepo.findOneBy({
-      id: savedUser.id,
-    });
+    return this.userService.findOneById(savedUser.id);
   }
 
   verifyJwt(jwt: string): Promise<any> {
