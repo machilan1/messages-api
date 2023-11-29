@@ -1,13 +1,22 @@
 import { User } from 'src/user/model/user.interface';
-import { IsNotEmpty, IsOptional } from 'class-validator';
+import {
+  IsInt,
+  IsNumber,
+  IsOptional,
+  IsString,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 
 export class CreateRoomDto {
-  @IsNotEmpty()
+  @IsString()
+  @MinLength(3)
   name: string;
 
-  @IsNotEmpty()
+  @IsString()
+  @MaxLength(500)
   description: string;
 
-  @IsOptional()
+  @IsInt({ each: true })
   userIds: number[];
 }

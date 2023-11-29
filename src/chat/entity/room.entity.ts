@@ -4,11 +4,13 @@ import {
   CreateDateColumn,
   Entity,
   ManyToMany,
+  ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { MessageEntity } from './message.entity';
+import { RoomConnectionEntity } from './joined-room.entity';
 
 @Entity()
 export class RoomEntity {
@@ -32,4 +34,10 @@ export class RoomEntity {
 
   @ManyToMany(() => UserEntity, (user) => user.rooms)
   users: UserEntity[];
+
+  @OneToMany(
+    () => RoomConnectionEntity,
+    (roomConnection) => roomConnection.room,
+  )
+  connectingUsers: UserEntity[];
 }

@@ -1,4 +1,5 @@
 import { ConnectedUserEntity } from 'src/chat/entity/connected-user.entity';
+import { RoomConnectionEntity } from 'src/chat/entity/joined-room.entity';
 import { MessageEntity } from 'src/chat/entity/message.entity';
 import { RoomEntity } from 'src/chat/entity/room.entity';
 import {
@@ -33,4 +34,10 @@ export class UserEntity {
 
   @OneToMany(() => ConnectedUserEntity, (connected) => connected.user)
   connections: ConnectedUserEntity[];
+
+  @OneToMany(
+    () => RoomConnectionEntity,
+    (roomConnection) => roomConnection.user,
+  )
+  connectedRooms: RoomEntity[];
 }

@@ -1,21 +1,44 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Param,
+  Post,
+  Request,
+  Query,
+  Get,
+} from '@nestjs/common';
 import { CreateRoomDto } from './dto/create-room.dto';
 import { RoomService } from './service/room.service';
 import { Room } from './model/room.interface';
+import { JwtService } from '@nestjs/jwt';
+import { CheckParticipantDto } from './dto/check-participant.dto';
 
 @Controller('room')
 export class ChatController {
-  constructor(private readonly chatService: RoomService) {}
+  constructor(
+    private readonly roomService: RoomService,
+    private readonly jwtService: JwtService,
+  ) {}
 
-  // WARNING this should be removed.
   @Post('create')
-  async create(@Body() room: CreateRoomDto): Promise<Room> {
-    const newRoom = await this.chatService.createRoom(room, {
-      email: 'rty@rty.rty',
-      id: 1,
-      username: 'rtyrty',
-    });
+  async create(
+    @Body() room: CreateRoomDto,
+    @Request() req: Request,
+  ): Promise<Room> {
+    const decoded = await this.jwtService.verifyAsync(
+      req.headers.get('authorization'),
+    );
+    return this.roomService.createRoom(room, decoded.user);
+  }
 
-    return newRoom;
+  @Get('checkParticipant')
+  async check(@Query() data: { userId: string; roomId: string }) {
+    let participants;
+    try {
+      participants = await this.roomService.findParticipants(+data.roomId);
+    } catch (error) {
+      return false;
+    }
+    return participants.map((user) => user.id).includes(+data.userId);
   }
 }

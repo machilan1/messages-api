@@ -22,7 +22,6 @@ export class AuthController {
 
   @Post('login')
   async login(@Body() loginDto: LoginDto): Promise<LoginResponse> {
-    console.log('login');
     const jwt = await this.authService.login(loginDto);
     return {
       accessToken: jwt,

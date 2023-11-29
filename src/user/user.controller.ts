@@ -1,6 +1,12 @@
-import { Controller, Get } from '@nestjs/common';
+import { Body, Controller, Get, Param, Query } from '@nestjs/common';
+import { UserService } from './service/user.service';
 
-@Controller('users')
+@Controller('user')
 export class UserController {
-  // constructor(){}
+  constructor(private readonly userService: UserService) {}
+
+  @Get()
+  async getUsers(@Query('substring') param: string) {
+    return this.userService.searchManyByName(param);
+  }
 }

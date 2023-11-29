@@ -3,13 +3,13 @@ import { Message } from '../model/message.interface';
 import { InjectRepository } from '@nestjs/typeorm';
 import { MessageEntity } from '../entity/message.entity';
 import { Repository } from 'typeorm';
-import { AddMessageDto } from '../dto/send-message.dto';
+import { SendMessageDto } from '../dto/send-message.dto';
 import { UserService } from 'src/user/service/user.service';
 import { RoomService } from './room.service';
 import { WsException } from '@nestjs/websockets';
 import { IPaginationOptions, paginate } from 'nestjs-typeorm-paginate';
 import { Room } from '../model/room.interface';
-import { FETCH_LIMIT } from '../constant/constant';
+import { SendSystemMessageDto } from '../dto/send-system-message.dto';
 
 @Injectable()
 export class MessageService {
@@ -20,19 +20,19 @@ export class MessageService {
     private readonly roomService: RoomService,
   ) {}
 
-  async sendMessage(message: AddMessageDto) {
+  async sendMessage(message: SendMessageDto) {
     try {
       const author = await this.userService.findOneById(message.authorId);
-
       if (!author) {
         throw new WsException('User not found');
       }
 
-      const room = await this.roomService.getOneById(message.roomId);
+      const room = await this.roomService.findOneById(message.roomId);
 
       if (!room) {
         throw new WsException('Room not found');
       }
+
       const newMessage: Message = { text: message.text, room, author };
 
       const res = await this.messageRepository.save(newMessage);
@@ -42,15 +42,42 @@ export class MessageService {
     }
   }
 
-  async loadMessageForRoom(roomId: number, lastRoom?: Room) {
-    const query = this.messageRepository
-      .createQueryBuilder('message')
-      .where('message.roomId = :roomId AND message.created_at < :date', {
-        roomId,
-        date: lastRoom?.createdAt ?? new Date(),
-      })
-      .limit(FETCH_LIMIT)
+  async sendSystemMessage(message: SendSystemMessageDto) {
+    try {
+      const author = await this.userService.findOneById(message.authorId);
+      if (!author) {
+        throw new WsException('User not found');
+      }
+
+      const room = await this.roomService.findOneById(message.roomId);
+
+      if (!room) {
+        throw new WsException('Room not found');
+      }
+
+      const newMessage: Message = {
+        text: message.text,
+        room,
+        author,
+        type: message.type,
+      };
+
+      const res = await this.messageRepository.save(newMessage);
+      return res;
+    } catch (err) {
+      throw err;
+    }
+  }
+
+  async findManyByRoomId(roomId: number) {
+    const messages = await this.messageRepository
+      .createQueryBuilder('messages')
+      .leftJoinAndSelect('messages.room', 'room')
+      .leftJoinAndSelect('messages.author', 'author')
+      .select(['messages', 'author'])
+      .where('room.id = :roomId', { roomId })
+      .orderBy('messages.created_at', 'DESC')
       .getMany();
-    return query;
+    return messages;
   }
 }

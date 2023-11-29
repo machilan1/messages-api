@@ -5,11 +5,7 @@ import { Repository } from 'typeorm';
 import { CreateRoomDto } from '../dto/create-room.dto';
 import { User } from 'src/user/model/user.interface';
 import { Room } from '../model/room.interface';
-import {
-  IPaginationOptions,
-  Pagination,
-  paginate,
-} from 'nestjs-typeorm-paginate';
+import { IPaginationOptions, paginate } from 'nestjs-typeorm-paginate';
 import { UserService } from 'src/user/service/user.service';
 import { UserEntity } from 'src/user/entity/user.entity';
 import { WsException } from '@nestjs/websockets';
@@ -22,11 +18,21 @@ export class RoomService {
     private readonly userService: UserService,
   ) {}
 
-  getOneById(roomId: number) {
-    return this.roomRepository.findOneBy({ id: roomId });
+  findOneById(roomId: number) {
+    return this.roomRepository.findOne({
+      where: { id: roomId },
+    });
   }
 
   async createRoom(room: CreateRoomDto, creator: User): Promise<Room> {
+    if (!room.userIds) {
+      throw 'No user id provided in the payload';
+    }
+
+    if (room.userIds.length < 1) {
+      throw 'No user id provided in the payload';
+    }
+
     if (!room.userIds.includes(creator.id)) {
       room.userIds.push(creator.id);
     }
@@ -41,27 +47,22 @@ export class RoomService {
 
     return this.roomRepository.save(newRoom);
   }
-  //
-  async getParticipants(roomId: number) {
-    const room = await this.roomRepository.findOne({
-      relations: ['users'],
-      where: { id: roomId },
-    });
 
-    return room.users;
-  }
-
-  async getRoomForUser(
-    userId: number,
-    options: IPaginationOptions,
-  ): Promise<Pagination<Room>> {
+  async findRoomForUser(userId: number, options: IPaginationOptions) {
     const query = this.roomRepository
       .createQueryBuilder('room')
       .leftJoin('room.users', 'user')
       .where('user.id = :userId', { userId })
-      .leftJoinAndSelect('room.users', 'all_users')
       .orderBy('room.updated_at', 'DESC');
     return paginate(query, options);
+  }
+
+  async findManyByUserId(userId: number) {
+    return this.roomRepository
+      .createQueryBuilder('room')
+      .leftJoinAndSelect('room.users', 'user')
+      .where('user.id = :userId', { userId })
+      .getMany();
   }
 
   async leaveRoom(roomId: number, userId: number) {
@@ -114,26 +115,24 @@ export class RoomService {
     }
 
     try {
-      const roomWithUser = await this.roomRepository
-        .createQueryBuilder('room')
-        .leftJoinAndSelect('room.users', 'user')
-        .select(['room.id', 'user.id'])
-        .where('room.id = :roomId', { roomId })
-        .getOne();
-
-      console.log(roomWithUser);
+      const roomWithUser = await this.roomRepository.findOne({
+        relations: ['users'],
+        where: { id: roomId },
+      });
       if (roomWithUser.users.map((user) => user.id).includes(userId)) {
         throw new Error();
+      } else {
+        roomWithUser.users.push(user);
       }
+      return roomWithUser;
     } catch (err) {
-      throw new WsException('User already in to group');
+      throw new WsException('User already in the group');
     }
-
-    return;
   }
 
-  async viewRoom(roomId: number, userId) {
+  async viewRoom(roomId: number, userId: number) {
     let roomWithMessages: RoomEntity;
+    let roomWithUser: RoomEntity;
 
     try {
       const room = await this.roomRepository.findOneBy({ id: roomId });
@@ -145,14 +144,11 @@ export class RoomService {
     }
 
     try {
-      const roomWithUser = await this.roomRepository
-        .createQueryBuilder('room')
-        .leftJoinAndSelect('room.users', 'user')
-        .select(['room.id', 'user.id'])
-        .where('room.id = :roomId', { roomId })
-        .getOne();
+      roomWithUser = await this.roomRepository.findOne({
+        relations: ['users'],
+        where: { id: roomId },
+      });
 
-      console.log(roomWithUser);
       if (!roomWithUser.users.map((user) => user.id).includes(userId)) {
         throw new Error();
       }
@@ -181,5 +177,14 @@ export class RoomService {
     }
 
     return roomWithMessages;
+  }
+
+  async findParticipants(roomId: number): Promise<UserEntity[]> {
+    const room = await this.roomRepository.findOne({
+      relations: ['users'],
+      where: { id: roomId },
+    });
+
+    return room.users;
   }
 }

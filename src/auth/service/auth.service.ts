@@ -9,6 +9,7 @@ import { UserService } from 'src/user/service/user.service';
 import { User } from 'src/user/model/user.interface';
 import { JwtService } from '@nestjs/jwt';
 import { compare, hash } from 'bcryptjs';
+import { Socket } from 'socket.io';
 
 @Injectable()
 export class AuthService {
@@ -36,7 +37,9 @@ export class AuthService {
       throw new ConflictException('Invalid credentials');
     }
 
-    return this.jwtService.signAsync({ user: foundUser });
+    const { password, ...userWithNoPassword } = foundUser;
+
+    return this.jwtService.signAsync({ user: userWithNoPassword });
   }
 
   async register(user: RegisterDto) {
@@ -73,5 +76,18 @@ export class AuthService {
 
   verifyJwt(jwt: string): Promise<any> {
     return this.jwtService.verifyAsync(jwt);
+  }
+
+  getJwtFromSocket(socket: Socket) {
+    const token = socket.handshake.headers.authorization;
+    const temp = token.split(' ');
+
+    if (temp.length === 1) {
+      return temp[0];
+    } else if (temp.length === 2) {
+      return temp[1];
+    } else {
+      throw new Error('jwt format fail');
+    }
   }
 }
